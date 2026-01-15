@@ -1,0 +1,24 @@
+services:
+
+# Runs once, fixes permissions, then stops.
+  init:
+    image: busybox
+    # Fix ownership to UID 101 (Nginx/App user)
+    command: chown -R 101:101 /data
+    volumes:
+      # Mount the volume we need to fix
+      - dad-jokes-html:/data
+  web:
+    image: nginxinc/nginx-unprivileged:alpine
+    ports:
+      - "8080:8080"
+    volumes:
+      - dad-jokes-html:/usr/share/nginx/html
+
+  app:
+    build: ./fetcher
+    volumes:
+      - dad-jokes-html:/data
+
+volumes:
+  dad-jokes-html:
