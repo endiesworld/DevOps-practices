@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: my-proxies
+  name: my-proxies
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: my-proxies
+  template:
+    metadata:
+      labels:
+        app: my-proxies
+    spec:
+      containers:
+      - image: nginx:1.29.4-alpine-slim
+        name: nginx
+  strategy: 
+    type: Recreate
+      

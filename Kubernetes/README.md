@@ -22,3 +22,24 @@ kubectl logs myapp # View the logs of the created pod
 kubectl delete pod myapp # Clean up by deleting the created pod
 ```
 
+## Deployment Example
+
+```bash
+Examples:
+  # Create a deployment named my-dep that runs the busybox image
+  kubectl create deployment my-dep --image=busybox
+
+  # Create a deployment with a command
+  kubectl create deployment my-dep --image=busybox -- date
+
+  # Create a deployment named my-dep that runs the nginx image with 3 replicas
+  kubectl create deployment my-dep --image=nginx --replicas=3
+
+  # Create a deployment named my-dep that runs the busybox image and expose port 5701
+  kubectl create deployment my-dep --image=busybox --port=5701
+
+  # Create a deployment named my-dep that runs multiple containers
+  kubectl create deployment my-dep --image=busybox:latest --image=ubuntu:latest --image=nginx
+
+  watch -n 1 "kubectl get pods" # Watch the pods status
+
