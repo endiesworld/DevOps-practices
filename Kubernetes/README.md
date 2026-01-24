@@ -72,3 +72,5 @@ kubectl run myapp --image=myimage --namespace=my-namespace # Create a pod in a s
 kubectl config set-context --current --namespace=my-namespace # Set the default namespace for the current context
 kubectl config view | less # View the current kubeconfig settings
 
+kubectl port-forward pods/mealie-5df8c97467-xl67x 9000 -n stevens # Port forward to a pod in a specific namespace
+```
