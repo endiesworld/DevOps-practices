@@ -74,3 +74,10 @@ kubectl config view | less # View the current kubeconfig settings
 
 kubectl port-forward pods/mealie-5df8c97467-xl67x 9000 -n stevens # Port forward to a pod in a specific namespace
 ```
+
+## Networking in Kubernetes
+Kubernetes networking allows communication between pods and services. Here are some example commands related to networking:
+
+```bash
+kubectl get pods --all-namespaces -o wide # List all pods across all namespaces with detailed information including IP addresses
+
