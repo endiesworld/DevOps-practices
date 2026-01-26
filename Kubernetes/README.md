@@ -81,3 +81,68 @@ Kubernetes networking allows communication between pods and services. Here are s
 ```bash
 kubectl get pods --all-namespaces -o wide # List all pods across all namespaces with detailed information including IP addresses
 
+```
+
+## Service Management
+Services in Kubernetes are used to expose applications running on a set of pods. Here are some example commands to create and manage services:
+```bash
+kubectl expose pod myapp --type=NodePort --port=8080 # Expose a pod as a service
+kubectl expose deployment my-dep --type=LoadBalancer --port=80 --target-port=8080 # Expose a deployment as a service
+
+# Delete a service
+kubectl delete service my-service
+``` 
+
+## Fixing Common Issues
+Here are some commands to troubleshoot and fix common issues in Kubernetes with pods and deployments:
+
+```bash
+kubectl get events --sort-by='.metadata.creationTimestamp' | less # View recent events in the cluster to identify issues    
+kubectl describe pod myapp | less # Get detailed information about a specific pod to diagnose issues
+
+docker kill $(docker ps -q -f name=k8s_mealie) # Forcefully stop a misbehaving container (use with caution)
+
+kubectl scale deployment mealie --replicas=0 -n stevens # Scale down a deployment to zero replicas to stop all pods
+kubectl delete pod myapp --force --grace-period=0 # Forcefully delete a pod that is stuck in terminating state
+```
+
+
+## Storage Management
+Kubernetes provides various storage options for managing persistent data. Here are some example commands related to storage:
+
+### Ephemeral Storage Example
+**Ephemeral storage** is temporary storage that is tied to the lifecycle of a pod(i.e the volume is deleted when the pod is deleted). Here are some example commands and a YAML configuration for using ephemeral storage in a pod.
+
+Types of ephemeral storage:
+- emptyDir
+- configMap
+
+```bash
+kubectl get pvc # List all Persistent Volume Claims (PVCs) in the current namespace
+
+# Explain this yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pd
+spec: # Define the pod specification
+  containers:
+  - image: registry.k8s.io/test-webserver
+    name: test-container
+    volumeMounts: # Mount the volume at /cache inside the container
+    - mountPath: /cache
+      name: cache-volume # Reference to the volume defined below
+  volumes: # Define the volume to be used by the pod
+  - name: cache-volume
+    emptyDir: # Use an emptyDir volume type
+      sizeLimit: 500Mi # Set size limit for the emptyDir volume
+      medium: Memory
+```
+
+### Persistent Storage Example
+**Persistent storage** is storage that persists beyond the lifecycle of a pod.
+
+#### Persistent Volume (PV) and Persistent Volume Claim (PVC)
+**Persistent Volumes (PVs)** are storage resources in a Kubernetes cluster, while **Persistent Volume Claims (PVCs)** are requests for those resources by users. Here are some example commands and YAML configurations for using PVs and PVCs in Kubernetes.
+
+```bash
