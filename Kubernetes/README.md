@@ -145,4 +145,105 @@ spec: # Define the pod specification
 #### Persistent Volume (PV) and Persistent Volume Claim (PVC)
 **Persistent Volumes (PVs)** are storage resources in a Kubernetes cluster, while **Persistent Volume Claims (PVCs)** are requests for those resources by users. Here are some example commands and YAML configurations for using PVs and PVCs in Kubernetes.
 
+
+#### Persistent Volume Claim (PVC) Example
+
+```yaml
+# persistent-volume-claim.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim  # <--- Changed from PersistentVolume
+metadata:
+  name: mealie-data-pvc      # typically ends in -pvc
+  namespace: stevens         # <--- VALID now!
+spec:
+  accessModes:
+    - ReadWriteOnce          # "I need a drive that locks to one node"
+  resources:                 # <--- VALID now! (PVs use 'capacity')
+    requests:
+      storage: 500Mi         # "I need at least 500Mi of space"
+  storageClassName: ""       # <--- Critical for binding to your specific PV
+
+```
+1. The Namespace is Now Valid
+Unlike a PersistentVolume (which is global), a PersistentVolumeClaim is Namespaced.
+
+Correct: namespace: stevens is now required (or assumes 'default').
+
+Why: A PVC is a request ticket belonging to a specific team or app (Mealie in the stevens namespace).
+
+2. The spec becomes a "Request"
+In a PVC, the spec defines what you need, not what physically exists.
+
+3. The "Matchmaking" (Binding)
+When you apply this PVC, Kubernetes acts like a broker. It looks at your spec and searches the cluster for a PersistentVolume (PV) that matches:
+
+Access Mode: Does the PV support ReadWriteOnce?
+
+Size: Is the PV's capacity >= the PVC's request (500Mi)?
+
+StorageClass: Do the class names match?
+
+Critical Note for your Lab (Rancher Desktop)
+If you apply this PVC without creating a manual PV first, one of two things will happen:
+
+Scenario A: Dynamic Provisioning (The "Magic" way) Rancher Desktop comes with a default StorageClass (usually local-path). If you omit storageClassName: "" or set it to local-path, Rancher will automatically create a PV for you on the fly. You don't need to write a PV manifest at all!
+
+Scenario B: Manual Binding If you want it to bind to the specific manual PV we discussed in the previous turn, you must ensure both the PV and PVC share the exact same storageClassName (e.g., set both to manual or leave both empty "").
+
+```yaml
+# persistent-volume.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mealie-data-pv
+  # namespace: stevens  <-- REMOVED (PVs are global)
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:             # 'resources' is for PVCs, 'capacity' is for PVs
+    storage: 500Mi
+  hostPath:             # <-- ADDED: The actual location on disk
+    path: "/mnt/data/mealie"
+```
+
+**The spec Breakdown:**
+1. accessModes: - ReadWriteOnce
+This defines how the storage can be mounted by the nodes in your cluster.
+
+ReadWriteOnce (RWO): The volume can be mounted as read-write by a single Node.
+
+Analogy: Like a USB drive. You can only plug it into one computer at a time.
+
+Note: Multiple pods on that same node can read/write to it, but pods on other nodes cannot touch it.
+
+Other options (for context):
+
+ReadWriteMany (RWX): Multiple nodes can read/write simultaneously (requires a file system like NFS).
+
+ReadOnlyMany (ROX): Multiple nodes can read, but none can write.
+
+2. resources
+This section defines the capacity (size) of the storage.
+
+requests: You are asking the cluster to reserve a specific amount of space.
+
+storage: 500Mi: You are requesting 500 Mebibytes.
+
+Note: 500Mi (Mebibytes) is slightly larger than 500MB (Megabytes). In Kubernetes, we usually use Mi/Gi.
+
+3. hostPath
+This specifies that the storage is located on the host node's filesystem.
+
 ```bash
+kubectl apply -f persistent-volume.yaml # Create the Persistent Volume (PV)
+kubectl apply -f persistent-volume-claim.yaml # Create the Persistent Volume Claim (PVC)
+
+kubectl get pv # List all Persistent Volumes (PVs) in the cluster
+kubectl get pvc -n stevens # List all Persistent Volume Claims (PVCs) in the 'stevens' namespace
+
+kubectl describe pv mealie-data-pv # Get detailed information about a specific PV
+kubectl describe pvc mealie-data-pvc -n stevens # Get detailed information about a specific PVC
+
+kubectl delete pvc mealie-data-pvc -n stevens # Delete the PVC when no longer needed
+kubectl delete pv mealie-data-pv # Delete the PV when no longer needed
+```
