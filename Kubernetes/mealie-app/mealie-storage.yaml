@@ -9,4 +9,5 @@ spec:
   resources:                 # <--- VALID now! (PVs use 'capacity')
     requests:
       storage: 500Mi         # "I need at least 500Mi of space"
-  storageClassName: local-path
+  # storageClassName: local-path # This is the default for Rancher Desktop/k3s.
+  storageClassName: standard # <--- CHANGED: Minikube's default class name Use 'standard' for most managed k8s services

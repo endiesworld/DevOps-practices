@@ -106,6 +106,14 @@ kubectl scale deployment mealie --replicas=0 -n stevens # Scale down a deploymen
 kubectl delete pod myapp --force --grace-period=0 # Forcefully delete a pod that is stuck in terminating state
 ```
 
+**Minikube Specific:** The LoadBalancer Tunnel
+In a "real" cloud (AWS/Azure), a LoadBalancer Service automatically gets an external IP. In Minikube (especially on WSL), the LoadBalancer IP will stay <pending> unless you create a tunnel.
+
+How to fix it: After applying your manifests, open a separate terminal window and run:
+
+```Bash
+minikube tunnel
+```
 
 ## Storage Management
 Kubernetes provides various storage options for managing persistent data. Here are some example commands related to storage:

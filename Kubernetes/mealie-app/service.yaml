@@ -5,7 +5,8 @@ metadata:
   namespace: stevens
 spec:
   selector:
-    app.kubernetes.io/name: mealie
+    # app.kubernetes.io/name: mealie # Refers to the deployment label
+    app: mealie # Refers to the pod label, as defined in deploy-mealie.yaml. Needed for proper routing.
   ports:
     - protocol: TCP
       port: 80
