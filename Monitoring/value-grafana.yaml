@@ -1,0 +1,2 @@
+grafana:
+  adminPassword: your_secure_password # Do not commit sensitive information in code repositories

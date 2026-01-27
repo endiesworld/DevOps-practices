@@ -74,3 +74,23 @@ helm upgrade --install prometheus-1 prometheus-community/kube-prometheus-stack \
   --namespace monitoring --create-namespace
 
 ```
+
+
+## Monitoring Your Helm Releases
+To monitor and manage your Helm releases, you can use the following commands:
+- List all releases:
+```bash
+helm list
+```
+- Upgrade a release:
+```bash
+helm upgrade my-release prometheus-community/kube-prometheus-stack --values custom-values.yaml
+```
+- Rollback a release to a previous version:
+```bash
+helm rollback my-release 1
+```
+- Uninstall a release:
+```bash
+helm uninstall my-release
+``` 
