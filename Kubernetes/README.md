@@ -255,3 +255,28 @@ kubectl describe pvc mealie-data-pvc -n stevens # Get detailed information about
 kubectl delete pvc mealie-data-pvc -n stevens # Delete the PVC when no longer needed
 kubectl delete pv mealie-data-pv # Delete the PV when no longer needed
 ```
+
+#### Storage Classes
+StorageClasses in Kubernetes define different types of storage (like SSDs, HDDs, network storage, etc.) that can be dynamically provisioned for Persistent Volumes (PVs). Here are some example commands related to StorageClasses:
+
+```bash
+kubectl get storageclass # List all StorageClasses in the cluster
+kubectl describe storageclass standard # Get detailed information about a specific StorageClass
+``` 
+
+#### Access Modes
+Access Modes in Kubernetes define how a Persistent Volume (PV) can be mounted by pods. Here are the common access modes:  
+- ReadWriteOnce (RWO): The volume can be mounted as read-write by a single node. Multiple pods on that node can read/write to the volume, but pods on other nodes cannot access it.  
+- ReadWriteMany (RWX): The volume can be mounted as read-write by multiple nodes simultaneously. This requires a file system that supports concurrent access, like NFS.  
+- ReadOnlyMany (ROX): The volume can be mounted as read-only by multiple nodes. No node can write to the volume.
+- ReadWriteOncePod (RWOP): The volume can be mounted as read-write by a single pod. This is a more restrictive mode introduced in newer Kubernetes versions.
+Here are some example commands related to Access Modes:
+
+```bash
+kubectl get pv # List all Persistent Volumes (PVs) in the cluster
+kubectl describe pv my-pv # Get detailed information about a specific PV, including its access modes
+``` 
+
+```bash
+kubectl get all -n stevens # List all resources in the 'stevens' namespace to verify storage usage
+```
