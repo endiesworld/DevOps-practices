@@ -34,3 +34,35 @@
 - **Helm**: A package manager for Kubernetes that can be used in GitOps for managing application deployments.
 - **Weaveworks**: A company that pioneered GitOps and provides tools and services around it.
 - **GitLab CI/CD**: Integrated CI/CD pipelines in GitLab that support GitOps practices.
+
+
+### kustomization
+kustomization is a Kubernetes-native configuration management tool that allows you to customize and manage Kubernetes resource configurations without modifying the original YAML files. It is often used in GitOps workflows to create environment-specific configurations.
+Kustomize works by defining a `kustomization.yaml` file that specifies how to transform and combine base resources into customized configurations. This allows you to maintain a single source of truth for your Kubernetes manifests while enabling easy customization for different environments (e.g., development, staging, production).
+Here is a simple example of a `kustomization.yaml` file:
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - deployment.yaml
+  - service.yaml
+patchesStrategicMerge:
+  - deployment-patch.yaml
+configMapGenerator:
+  - name: app-config
+    literals:
+      - ENV=production
+      - DEBUG=false
+```
+In this example:
+- `resources`: Lists the base Kubernetes resource files to include.
+- `patchesStrategicMerge`: Specifies patches to modify the base resources.
+- `configMapGenerator`: Generates a ConfigMap with specified key-value pairs. 
+
+## Getting Started with GitOps
+To get started with GitOps, choose a GitOps tool that fits your needs (e.g., Flux, Argo CD) and follow the official documentation for installation and configuration. Set up a Git repository to store your infrastructure and application configurations, and implement automated CI/CD pipelines to deploy changes based on Git commits.
+### Recommended Reading
+- [The GitOps Handbook](https://www.gitops.tech/): A comprehensive guide to GitOps principles and practices.
+- [Flux Documentation](https://fluxcd.io/docs/): Official documentation for Flux, a popular GitOps tool.
+- [Argo CD Documentation](https://argo-cd.readthedocs.io/en/stable/): Official documentation for Argo CD, another popular GitOps tool.
+- [GitOps Best Practices](https://www.weave.works/technologies/gitops/): Best practices and guidelines for implementing GitOps effectively.
