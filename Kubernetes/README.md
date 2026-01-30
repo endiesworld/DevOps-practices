@@ -280,3 +280,6 @@ kubectl describe pv my-pv # Get detailed information about a specific PV, includ
 ```bash
 kubectl get all -n stevens # List all resources in the 'stevens' namespace to verify storage usage
 ```
+
+
+

@@ -49,6 +49,16 @@ spec:
 - `ServiceMonitor`: Specifies how to monitor services.
 - `Alertmanager`: Configures Alertmanager instances.
 
+
+## How to view CRDs installed in your cluster
+To view the CRDs installed in your Kubernetes cluster, you can use the following command:
+```bash
+kubectl get crds
+
+kubectl get customresourcedefinitions.apiextensions.k8s.io
+```
+
+
 ## Install Prometheus Operator and Grafana using Helm
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -76,3 +86,5 @@ kubectl -n monitoring get secret prometheus-1-grafana \
 ```
 
 Login with: username: admin and the password printed above.
+
+
