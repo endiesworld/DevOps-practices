@@ -295,7 +295,14 @@ while ssh -L 8080:myapp-service:80 user@bastion-host means that requests to loca
 **bastion-host** is a server that acts as a gateway to access resources in a private network securely.
 How to use bastion-host:
 1. Ensure you have SSH access to the bastion host.
-2. Use the ssh -L command to create a secure tunnel from your local machine to the
+2. Use the ssh -L command to create a secure tunnel from your local machine to the bastion host, specifying the local port, remote service, and port.
+3. Access the service by connecting to localhost on the specified local port.
+
+### Examples of Different Contexts for Port Forwarding
+
+1. **Port Forwarding from a Remote Machine (e.g., Homelab)** 
+
+
 
 ```bash
 kubectl port-forward pod/my-pod 8080:9090
@@ -352,3 +359,4 @@ Port 8080 opens on sochi.
 Reachable locally on sochi via localhost:8080.
 
 Not reachable from your Windows machine unless you add routing/tunneling.
+
