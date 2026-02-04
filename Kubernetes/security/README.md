@@ -53,8 +53,8 @@ kind: Pod
 metadata:
   name: secure-guard
 spec:
-spec:
   securityContext:
+    fsGroup: 3000            # Ensure file system group ownership
     runAsUser: 1000           # Layer 1: Be a standard user
     runAsGroup: 3000
   containers:
