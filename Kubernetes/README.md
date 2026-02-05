@@ -66,6 +66,44 @@ Examples:
   watch -n 1 "kubectl get pods" # Watch the pods status
 ```
 
+## Editing a Pod or Deployment
+You can edit the configuration of a pod or deployment using the `kubectl edit` command. Here are some example commands:
+```bash
+kubectl edit pod myapp # Edit the configuration of the pod named 'myapp'. NOTE: Some fields are immutable and cannot be changed.
+kubectl edit deployment my-dep # Edit the configuration of the deployment named 'my-dep'
+
+# OR
+kubectl get deployment my-dep -o yaml > my-dep.yaml # Export the deployment to a YAML file
+# Edit the my-dep.yaml file using your preferred text editor
+kubectl apply -f my-dep.yaml # Apply the changes from the YAML file
+```
+
+## Environment Variables in Pods
+You can set environment variables for containers in a pod using the `env` field in the pod specification. Here are some examples:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+spec:
+  containers:
+  - name: mycontainer
+    image: myimage
+    env:
+    - name: MY_ENV_VAR # The name of the environment variable
+      value: "myvalue" # Set a static environment variable. Henece, MY_ENV_VAR=
+    - name: CONFIG_ENV_VAR
+      valueFrom:
+        secretKeyRef:
+          name: my-secret
+          key: secret-key # Set an environment variable from a Secret. Henece, CONFIG_ENV_VAR=<value from secret-key in my-secret>
+    - name: ANOTHER_ENV_VAR
+      valueFrom:
+        configMapKeyRef:
+          name: my-configmap
+          key: config-key # Set an environment variable from a ConfigMap. Henece, ANOTHER_ENV_VAR=<value from config-key in my-configmap>
+```
+
 ## Namespace Management
 In Kubernetes, namespaces are used to organize and manage resources within a cluster. Here are some common commands for managing namespaces:
 

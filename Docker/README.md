@@ -64,3 +64,14 @@ RUN echo "Building version $APP_VERSION"
 docker build --build-arg APP_VERSION=2.0.0 -t my-image-name .
 # Output: Building version 2.0.0
 ```
+
+### Environment Variables
+You can set environment variables in the Dockerfile using the `ENV` instruction.
+**Example:**
+```Dockerfile
+ENV APP_ENV=production
+```
+**Using the environment variable:**
+```bash
+docker run -e APP_ENV=development my-image-name # Override at runtime
+```
