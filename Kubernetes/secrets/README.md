@@ -1,4 +1,127 @@
-# GitOps Secrets with Flux + SOPS + age (Encrypt in Git, Decrypt in Cluster)
+# Secrets Management in Kubernetes
+A Secret is a Kubernetes object that allows you to store sensitive information, such as passwords, OAuth tokens, and SSH keys. Secrets help you manage sensitive data separately from application code, enhancing security and flexibility. When a pod is created, inject the secret into the pod so the sensitive data is available as environment variables or as files in a volume.
+
+There are two ways to create and use Secrets in Kubernetes:
+1. Imperative way using `kubectl` commands
+```bash
+kubectl create secret generic my-secret --from-literal=username=myuser --from-literal=password=mypassword
+```
+**Explanation:** This command creates a Secret named `my-secret` with two key-value pairs: `username=myuser` and `password=mypassword`.
+If you wish to add additional key value pairs, simply specify the from literal options multiple times.
+
+2. Declarative way using a Secret definition file (YAML or JSON). So while creating a secret with a declarative approach, you must specify the secret values in a hashed format.
+
+So you must specify the data in an encoded form like this.
+Create a file named `secret.yaml` with the following content:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+type: Opaque
+data:
+  username: bXl1c2Vy # base64 for "myuser"
+  password: bXlwYXNzd29yZA== # base64 for "mypassword"
+```
+**Encoding Note:** Convert your plain text values to base64 encoded format using the following command:
+```bash
+echo -n 'myuser' | base64 # 'myuser' becomes bXl1c2Vy
+echo -n 'mypassword' | base64 # 'mypassword' becomes bXlwYXNzd29yZA==
+``` 
+
+**Decoding Note:** To decode a base64 encoded value, you can use:
+```bash
+echo 'bXl1c2Vy' | base64 --decode
+```
+
+Then apply the file using kubectl:
+```bash
+kubectl apply -f secret.yaml
+```
+## Viewing Secrets
+To view the created Secrets, use the following command:
+```bash
+kubectl get secrets
+kubectl describe secret my-secret    
+```
+## Using a Secret in a Pod
+You can use a Secret in a Pod in two ways:
+1. As environment variables
+2. As files in a volume
+### 1. Using Secret as Environment Variables
+Create a Pod definition file named `pod-env.yaml`:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-container
+    image: nginx
+    envFrom:
+    - secretRef:
+        name: my-secret # Reference the Secret here
+```
+
+**Note:** The above example mounts all key-value pairs from the Secret as environment variables in the container. Each key in the Secret becomes an environment variable with the corresponding value.
+
+To inject specific keys from the Secret as environment variables, you can use the `env` field like this:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-container
+    image: nginx
+    env:
+    - name: MY_USERNAME
+      valueFrom:
+        secretKeyRef:
+          name: my-secret
+          key: username
+    - name: MY_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: my-secret
+          key: password
+```
+
+Then create the Pod using:
+```bash
+kubectl apply -f pod-env.yaml
+```
+### 2. Using Secret as Files in a Volume
+Create a Pod definition file named `pod-volume.yaml`:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-container
+    image: nginx
+    volumeMounts:
+    - name: secret-volume
+      mountPath: /etc/secret-data
+  volumes:
+  - name: secret-volume
+    secret:
+      secretName: my-secret
+```
+Then create the Pod using:
+```bash
+kubectl apply -f pod-volume.yaml
+```
+
+**Note:** In this example, the Secret `my-secret` is mounted as files in the `/etc/secret-data` directory inside the container. Each key in the Secret becomes a file with the corresponding value as its content.
+
+
+
+## GitOps Secrets with Flux + SOPS + age (Encrypt in Git, Decrypt in Cluster)
 
 This README documents a clean workflow to **store Kubernetes `Secret` manifests encrypted in Git** and have **Flux decrypt them inside the cluster** during reconciliation.
 
