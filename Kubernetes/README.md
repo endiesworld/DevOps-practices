@@ -27,6 +27,22 @@ kubectl logs myapp # View the logs of the created pod
 kubectl delete pod myapp # Clean up by deleting the created pod
 ```
 
+## Commands and Arguments in a Pod
+In Kubernetes, you can define the command and arguments to run in a container within a pod using the `command` and `args` fields in the pod specification. Here are some examples:
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+spec:
+  containers:
+  - name: mycontainer
+    image: myimage
+    command: ["sleep"] # Specifies the command to run, i.e overrides the default ENTRYPOINT of the image
+    args: ["300"]           # Specifies the arguments to the command i.e overrides the default CMD of the image
+```
+
+
 ## Deployment Example
 Deployments in Kubernetes are used to manage a set of identical pods. Here are some example commands to create and manage deployments:
 
