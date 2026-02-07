@@ -7,7 +7,7 @@ There are two ways to create and use Secrets in Kubernetes:
 kubectl create secret generic my-secret --from-literal=username=myuser --from-literal=password=mypassword
 ```
 **Explanation:** This command creates a Secret named `my-secret` with two key-value pairs: `username=myuser` and `password=mypassword`.
-If you wish to add additional key value pairs, simply specify the from literal options multiple times.
+If you wish to add additional key value pairs, simply specify the "--from-literal" options multiple times.
 
 2. Declarative way using a Secret definition file (YAML or JSON). So while creating a secret with a declarative approach, you must specify the secret values in a hashed format.
 
@@ -23,7 +23,9 @@ data:
   username: bXl1c2Vy # base64 for "myuser"
   password: bXlwYXNzd29yZA== # base64 for "mypassword"
 ```
+
 **Encoding Note:** Convert your plain text values to base64 encoded format using the following command:
+
 ```bash
 echo -n 'myuser' | base64 # 'myuser' becomes bXl1c2Vy
 echo -n 'mypassword' | base64 # 'mypassword' becomes bXlwYXNzd29yZA==
@@ -44,10 +46,12 @@ To view the created Secrets, use the following command:
 kubectl get secrets
 kubectl describe secret my-secret    
 ```
+
 ## Using a Secret in a Pod
 You can use a Secret in a Pod in two ways:
 1. As environment variables
 2. As files in a volume
+
 ### 1. Using Secret as Environment Variables
 Create a Pod definition file named `pod-env.yaml`:
 ```yaml
@@ -174,13 +178,15 @@ age-keygen -o age.agekey
 Print the public key (recipient):
 age-keygen -y age.agekey
 # outputs: age1...
+# To see both public and private keys:
+cat age.agekey
 ```
+
 The public key is used to encrypt files. The private key is used to decrypt files.
 What to keep where
 
-Private key (age.agekey): keep safe (NEVER commit to Git)
-
-Public key (age1...): safe to share/use for encryption
+- Private key (age.agekey): keep safe (NEVER commit to Git)
+- Public key (age1...): safe to share/use for encryption
 
 ### Store the age private key in the cluster (one-time)
 
@@ -188,15 +194,46 @@ Create a Kubernetes Secret in flux-system that contains your private key.
 
 The key inside the Secret must end with .agekey.
 ```bash
-kubectl -n flux-system create secret generic sops-age \
-  --from-file=identity.agekey=age.agekey
-# Verify:
 
+cat age.agekey |
+kubectl create secret generic sops-age \
+--namespace=flux-system \
+--from-file=age.agekey=/dev/stdin
+# Verify:
 kubectl -n flux-system get secret sops-age
 ```
+**NOTE:** The name `sops-age` is arbitrary but must match the `secretRef` name you will use in the Flux Kustomization later.
 
-### Configure Flux to use the age private key
-Edit your `Kustomization` resource (e.g., `clusters/staging/kustomization.yaml`) to add the decryption configuration:
+### Encrypt an entire file using SOPS and the age public key:
+```bash
+sops --encrypt --age <age-public-key> --output secret.enc.yaml secret.yaml
+```
+  ## OR
+
+### Encrypt specific fields in the file (e.g., only the `data` field):
+```bash
+sops --encrypt --age <age-public-key> --output secret.enc.yaml --encrypted-regex '^(data)$' secret.yaml
+# OR to encrypt both `data` and `stringData` fields:
+sops --age=$AGE_PUBLIC --encrypt --encrypted-regex '^(data|stringData)$' --in-place test-secret.yaml
+```
+**NOTE:** To decrypt the file locally for verification, you can use:
+```bash
+SOPS_AGE_KEY_FILE=age.agekey sops --decrypt --in-place test-secret.yaml
+#sops --decrypt --age <age-private-key> secret.enc.yaml
+```
+
+### Configure Flux to use the age private key (Telling Flux where to find the decryption key)
+
+- create a ".sops.yaml" file in the root of your Git repo with the following content:
+```yaml
+creation_rules:
+  - path_regex: '.*\.enc\.yaml$' # Only decrypt files ending with .enc.yaml
+    encrypted_regex: '^(data|stringData)$' # Only decrypt the "data" and "stringData" fields in Secret manifests
+    age: <age-public-key>
+```
+
+### Edit your `Kustomization` resource (e.g., `clusters/staging/kustomization.yaml`) to add the decryption configuration:
+- Tell Flux to actually use it for your specific project. You do this by adding a decryption block to your Kustomization manifest (usually found in clusters/staging/kustomization.yaml).
 
 ```yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
@@ -212,6 +249,44 @@ spec:
             name: sops-age
 
 ```
+**NOTE:** The `secretRef` name must match the name of the Kubernetes Secret you created in the `flux-system` namespace that contains your age private key.
+
+**MY CASE:** I named the Secret `sops-age`, so I reference it here. Also, my current GitOps repo structure looks like this:
+```text
+(base) endie@Endiesworld:~/Projects/Homelab/sochi/hml-project-1$ tree clusters/
+clusters/
+└── staging
+    ├── apps.yaml
+    └── flux-system
+        ├── gotk-components.yaml
+        ├── gotk-sync.yaml
+        └── kustomization.yaml
+```
+
+Where: flux-system => kustomization.yaml => ├── gotk-sync.yaml => apps.yaml. The encrypted Secret manifest will be referenced in apps.yaml like this:
+```yaml
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  path: ./apps/staging
+  prune: true
+  # --- ADDED HERE ---
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  # -----------------------
+  retryInterval: 2m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  timeout: 5m0s
+```
+
 ### Encrypt a Secret manifest using SOPS + age
 Create a Kubernetes Secret manifest (e.g., `secret.yaml`):
 ```yaml
@@ -224,10 +299,7 @@ data:
     username: bXl1c2Vy # base64 for "myuser"
     password: bXlwYXNzd29yZA== # base64 for "mypassword"
 ```
-Encrypt it using SOPS and the age public key:
-```bash
-sops --encrypt --age <age-public-key> --output secret.enc.yaml secret.yaml
-```
+
 Commit and push the encrypted file (`secret.enc.yaml`) to your Git repo.
 
 ### Apply changes
