@@ -222,6 +222,16 @@ SOPS_AGE_KEY_FILE=age.agekey sops --decrypt --in-place test-secret.yaml
 #sops --decrypt --age <age-private-key> secret.enc.yaml
 ```
 
+**Note:** Ensure that the encrypted file is in a directory that Flux is watching (e.g., `clusters/staging/apps/`) and that the file name ends with `.enc.yaml` (or whatever regex you specified in the .sops.yaml) so that Flux knows to decrypt it. Also ensure that the encrypted file is a valid Kubernetes Secret manifest, and belongs to the appropriate namespace if specified.
+**Note:** In your cluster, the Flux controller will use the age private key stored in the `sops-age` Secret to decrypt the file `test-secret.yaml` during reconciliation. You do not need to (and should not) store the private key in Git or on your workstation after encryption. 
+
+**Recall:** When you set namespace: <namespace-value> at the Kustomization level, Kustomize performs what is known as Namespace Transformation. It will automatically inject that namespace into every resource listed in that folder, effectively "stamping" the <namespace-value> name onto your secret before it is sent to the Kubernetes API.
+
+### The "Management" vs. "Consumption" Rule
+flux-system is where your Decryption Key (sops-age) lives. Flux uses this internally to "unlock" your files.
+
+The target namespace (like staging or fleetmindai) is where your Application Secret (test-secret) should live. Your apps (like your fleetmindai deployment) generally cannot "reach out" into the flux-system namespace to grab a password due to Kubernetes security boundaries. Instead, you should create a separate Secret in the target namespace (staging) that contains the decrypted values, and reference that Secret in your Deployment manifests.
+
 ### Configure Flux to use the age private key (Telling Flux where to find the decryption key)
 
 - create a ".sops.yaml" file in the root of your Git repo with the following content:
@@ -287,18 +297,7 @@ spec:
   timeout: 5m0s
 ```
 
-### Encrypt a Secret manifest using SOPS + age
-Create a Kubernetes Secret manifest (e.g., `secret.yaml`):
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-    name: my-secret
-type: Opaque
-data:
-    username: bXl1c2Vy # base64 for "myuser"
-    password: bXlwYXNzd29yZA== # base64 for "mypassword"
-```
+
 
 Commit and push the encrypted file (`secret.enc.yaml`) to your Git repo.
 

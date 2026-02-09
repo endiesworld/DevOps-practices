@@ -53,14 +53,14 @@ kind: Pod
 metadata:
   name: secure-guard
 spec:
-  securityContext:
+  securityContext: # Pod-level settings
     fsGroup: 3000            # Ensure file system group ownership
     runAsUser: 1000           # Layer 1: Be a standard user
     runAsGroup: 3000
   containers:
   - name: my-app
     image: my-app-image
-    securityContext:
+    securityContext: # Container-level overrides take precedence over Pod-level settings
       allowPrivilegeEscalation: false  # Stop user from becoming root
       capabilities:
         drop: ["ALL"]         # Layer 2: Drop the Swiss Army Knife
