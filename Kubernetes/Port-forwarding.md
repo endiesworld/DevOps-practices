@@ -173,3 +173,9 @@ kubectl -n <namespace> get pod <pod-name> -o yaml
 1. Default bind is localhost (`127.0.0.1`) and is safest.
 2. Avoid `--address 0.0.0.0` unless you intentionally want LAN access.
 3. Stop forwards and SSH tunnels when finished.
+
+## 10. Related Guides
+
+1. Kubernetes overview: `Kubernetes/README.md`
+2. ConfigMaps runbook: `Kubernetes/configMaps/README.md`
+3. Volumes and volumeMounts (beginner): `Kubernetes/volumes/README.md`
