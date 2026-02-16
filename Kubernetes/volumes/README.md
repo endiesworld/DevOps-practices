@@ -231,7 +231,81 @@ kubectl -n stevens rollout status deployment/pvc-demo
 kubectl -n stevens exec deployment/pvc-demo -- cat /data/hello.txt
 ```
 
-## 9. `subPath` (Common Confusion)
+## 9. Example D: `hostPath` (Node Filesystem Mount)
+
+`hostPath` mounts a directory or file from the Kubernetes node into your Pod.
+
+Use cases:
+1. Local development on single-node clusters (Minikube, Kind, single-node k3s).
+2. Node-level agents that read host logs or runtime files.
+3. Specialized workloads that must access a known path on the host.
+
+Avoid for general app data in production:
+1. It tightly couples Pods to node filesystem layout.
+2. It can create security risk by exposing host files to containers.
+3. Data behavior varies when Pods move to different nodes.
+
+### `hostPath` vs `PVC` (Quick Comparison)
+
+| Aspect | `hostPath` | `PersistentVolumeClaim (PVC)` |
+|---|---|---|
+| Backing storage | Direct path on a node filesystem | Abstract claim bound to a PersistentVolume via StorageClass |
+| Portability across nodes | Low | High |
+| Best fit | Local/dev labs, node-agent workloads | Stateful apps, shared team environments, production paths |
+| Scheduling impact | Pod is effectively tied to node/path availability | Scheduler can place Pod where bound volume is accessible |
+| Data persistence | Persists only on that node/path | Persists according to storage backend policy |
+| Security risk | Higher (container can touch host filesystem) | Lower and more controlled |
+| Multi-node reliability | Weak | Stronger and designed for this |
+| Recommended default | No (except specific node-level needs) | Yes |
+
+`hostpath-demo.yaml`
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostpath-demo
+  namespace: stevens
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hostpath-demo
+  template:
+    metadata:
+      labels:
+        app: hostpath-demo
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "sleep 3600"]
+        volumeMounts:
+        - name: host-data
+          mountPath: /host-data
+      volumes:
+      - name: host-data
+        hostPath:
+          path: /tmp/k8s-hostpath-demo
+          type: DirectoryOrCreate
+```
+
+Apply and verify:
+
+```bash
+kubectl apply -f hostpath-demo.yaml
+kubectl -n stevens rollout status deployment/hostpath-demo
+kubectl -n stevens exec deployment/hostpath-demo -- sh -c 'echo "from-hostpath" > /host-data/hello.txt'
+kubectl -n stevens exec deployment/hostpath-demo -- cat /host-data/hello.txt
+kubectl -n stevens get pod -l app=hostpath-demo -o wide
+```
+
+Important:
+1. Prefer `readOnly: true` on `volumeMounts` when write access is not required.
+2. `DirectoryOrCreate` is safer for demos because Kubernetes creates the path if missing.
+3. For persistent production storage, use PVC-backed volumes instead of `hostPath`.
+
+## 10. `subPath` (Common Confusion)
 
 `subPath` mounts one file/folder from a volume to a specific path:
 
@@ -247,15 +321,16 @@ Use carefully:
 2. ConfigMap updates do not auto-refresh with `subPath`.
 3. Usually requires Pod restart to pick up changes.
 
-## 10. Common Beginner Mistakes
+## 11. Common Beginner Mistakes
 
 1. Name mismatch between `volumes[].name` and `volumeMounts[].name`.
 2. Missing namespace for PVC/ConfigMap.
 3. Using relative `mountPath` instead of absolute path.
 4. Expecting `emptyDir` data to survive Pod deletion.
 5. Expecting `env`-based or `subPath`-based config to live-refresh.
+6. Using `hostPath` for production app data on multi-node clusters.
 
-## 11. Troubleshooting Commands
+## 12. Troubleshooting Commands
 
 ```bash
 kubectl -n stevens get pods,pvc,configmap
@@ -263,23 +338,27 @@ kubectl -n stevens describe pod <pod-name>
 kubectl -n stevens logs <pod-name>
 kubectl -n stevens exec <pod-name> -- mount
 kubectl -n stevens exec <pod-name> -- ls -la /data
+kubectl -n stevens describe pod -l app=hostpath-demo
 ```
 
 If a volume does not mount:
 1. Check `kubectl describe pod <pod-name>` events first.
 2. Verify referenced object exists in same namespace (`ConfigMap`, `Secret`, `PVC`).
-3. Confirm RBAC/policies if cluster restrictions are enabled.
+3. For `hostPath`, verify the node path and file permissions are valid.
+4. Confirm RBAC/policies if cluster restrictions are enabled.
 
-## 12. Cleanup
+## 13. Cleanup
 
 ```bash
 kubectl -n stevens delete pod shared-emptydir-demo --ignore-not-found
-kubectl -n stevens delete deployment config-file-demo pvc-demo --ignore-not-found
+kubectl -n stevens delete deployment config-file-demo pvc-demo hostpath-demo --ignore-not-found
 kubectl -n stevens delete configmap app-config-files --ignore-not-found
 kubectl -n stevens delete pvc demo-data-pvc --ignore-not-found
 ```
 
-## 13. Related Guides
+Note: `hostPath` data remains on the node filesystem (`/tmp/k8s-hostpath-demo`) until removed on that node.
+
+## 14. Related Guides
 
 1. Kubernetes overview: `Kubernetes/README.md`
 2. ConfigMaps guide: `Kubernetes/configMaps/README.md`
