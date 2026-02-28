@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="420" viewBox="0 0 1280 420" role="img" aria-label="NodePort vs LoadBalancer vs Ingress">
+  <style>
+    .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+    .card { rx: 14; ry: 14; stroke-width: 2; }
+    .h { font: 700 22px Arial, sans-serif; fill: #0f172a; }
+    .t { font: 500 15px Arial, sans-serif; fill: #1e293b; }
+    .badge { font: 700 13px Arial, sans-serif; fill: #0f172a; }
+  </style>
+
+  <text x="640" y="38" class="title" text-anchor="middle">Service Exposure Options</text>
+
+  <rect x="40" y="70" width="380" height="300" class="card" fill="#eff6ff" stroke="#1d4ed8"/>
+  <text x="70" y="110" class="h">NodePort</text>
+  <text x="70" y="145" class="t">- Exposes a high port on each node</text>
+  <text x="70" y="172" class="t">- Good for local labs and quick tests</text>
+  <text x="70" y="199" class="t">- Limited UX and L7 routing capability</text>
+  <rect x="70" y="230" width="150" height="28" fill="#dbeafe" rx="8"/>
+  <text x="145" y="248" class="badge" text-anchor="middle">Cost: Low</text>
+
+  <rect x="450" y="70" width="380" height="300" class="card" fill="#fff7ed" stroke="#c2410c"/>
+  <text x="480" y="110" class="h">LoadBalancer</text>
+  <text x="480" y="145" class="t">- Cloud LB in front of one Service</text>
+  <text x="480" y="172" class="t">- Simple public exposure model</text>
+  <text x="480" y="199" class="t">- Can cost more at larger service counts</text>
+  <rect x="480" y="230" width="170" height="28" fill="#ffedd5" rx="8"/>
+  <text x="565" y="248" class="badge" text-anchor="middle">Cost: Medium/High</text>
+
+  <rect x="860" y="70" width="380" height="300" class="card" fill="#f0fdf4" stroke="#15803d"/>
+  <text x="890" y="110" class="h">Ingress</text>
+  <text x="890" y="145" class="t">- HTTP(S) routing across many Services</text>
+  <text x="890" y="172" class="t">- Centralized TLS and edge policy</text>
+  <text x="890" y="199" class="t">- Needs an Ingress Controller</text>
+  <rect x="890" y="230" width="190" height="28" fill="#dcfce7" rx="8"/>
+  <text x="985" y="248" class="badge" text-anchor="middle">Scale Efficiency: High</text>
+</svg>
