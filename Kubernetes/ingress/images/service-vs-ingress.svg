@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="560" viewBox="0 0 1280 560" role="img" aria-label="Kubernetes Service vs Ingress comparison">
+  <style>
+    .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+    .card { rx: 14; ry: 14; stroke-width: 2; }
+    .h { font: 700 24px Arial, sans-serif; fill: #0f172a; }
+    .t { font: 500 15px Arial, sans-serif; fill: #1e293b; }
+    .b { font: 700 14px Arial, sans-serif; fill: #0f172a; }
+  </style>
+
+  <text x="640" y="40" class="title" text-anchor="middle">Service vs Ingress: Different Jobs</text>
+
+  <rect x="50" y="90" width="560" height="420" class="card" fill="#eff6ff" stroke="#1d4ed8"/>
+  <text x="90" y="135" class="h">Service</text>
+  <text x="90" y="170" class="t">- Stable endpoint for Pods</text>
+  <text x="90" y="198" class="t">- Built-in load balancing across Pod replicas</text>
+  <text x="90" y="226" class="t">- Works at L3/L4 depending on type</text>
+  <text x="90" y="254" class="t">- Types: ClusterIP, NodePort, LoadBalancer</text>
+  <text x="90" y="282" class="t">- Routes to one backend selector per Service</text>
+  <rect x="90" y="320" width="460" height="60" fill="#dbeafe" rx="10"/>
+  <text x="110" y="356" class="b">Use it when: you need Pod discovery + stable internal access.</text>
+  <rect x="90" y="400" width="460" height="80" fill="#ffffff" stroke="#3b82f6" stroke-width="2" rx="10"/>
+  <text x="110" y="430" class="t">Example: app Pod talks to MySQL via `mysql-service:3306`</text>
+  <text x="110" y="456" class="t">Ingress still routes to Services, not directly to Pods.</text>
+
+  <rect x="670" y="90" width="560" height="420" class="card" fill="#f0fdf4" stroke="#15803d"/>
+  <text x="710" y="135" class="h">Ingress</text>
+  <text x="710" y="170" class="t">- HTTP/HTTPS entry layer (L7)</text>
+  <text x="710" y="198" class="t">- Host/path based routing to multiple Services</text>
+  <text x="710" y="226" class="t">- Central place for TLS termination policy</text>
+  <text x="710" y="254" class="t">- Requires an Ingress Controller</text>
+  <text x="710" y="282" class="t">- One endpoint can serve many apps</text>
+  <rect x="710" y="320" width="460" height="60" fill="#dcfce7" rx="10"/>
+  <text x="730" y="356" class="b">Use it when: users access multiple HTTP apps from one edge.</text>
+  <rect x="710" y="400" width="460" height="80" fill="#ffffff" stroke="#22c55e" stroke-width="2" rx="10"/>
+  <text x="730" y="430" class="t">Example: `shop.example.com/` -> web-service,</text>
+  <text x="730" y="456" class="t">`shop.example.com/watch` -> video-service</text>
+</svg>

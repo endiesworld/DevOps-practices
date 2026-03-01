@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-label="Ingress rules mental model host path and default backend">
+  <style>
+    .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+    .h { font: 700 18px Arial, sans-serif; fill: #0f172a; }
+    .t { font: 500 14px Arial, sans-serif; fill: #334155; }
+    .box { rx: 12; ry: 12; stroke-width: 2; }
+    .arrow { stroke: #1e293b; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1e293b"/>
+    </marker>
+  </defs>
+
+  <text x="640" y="38" class="title" text-anchor="middle">Ingress Rules Mental Model</text>
+
+  <rect x="60" y="80" width="1160" height="500" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" rx="14"/>
+
+  <rect x="90" y="120" width="300" height="80" class="box" fill="#dbeafe" stroke="#1d4ed8"/>
+  <text x="110" y="152" class="h">Incoming Request</text>
+  <text x="110" y="174" class="t">Host + Path + Protocol</text>
+
+  <rect x="460" y="120" width="350" height="80" class="box" fill="#dcfce7" stroke="#15803d"/>
+  <text x="480" y="152" class="h">Match Host Rule</text>
+  <text x="480" y="174" class="t">example.com vs watch.example.com</text>
+
+  <rect x="880" y="120" width="300" height="80" class="box" fill="#ffedd5" stroke="#c2410c"/>
+  <text x="900" y="152" class="h">Then Match Path</text>
+  <text x="900" y="174" class="t">/ , /api , /watch ...</text>
+
+  <path d="M390 160 H460" class="arrow"/>
+  <path d="M810 160 H880" class="arrow"/>
+
+  <rect x="120" y="260" width="500" height="260" class="box" fill="#eff6ff" stroke="#1d4ed8"/>
+  <text x="145" y="292" class="h">Host: shop.example.com</text>
+  <text x="145" y="325" class="t">Path /watch  -> video-service:80</text>
+  <text x="145" y="352" class="t">Path /api    -> api-service:80</text>
+  <text x="145" y="379" class="t">Path /       -> web-service:80</text>
+  <text x="145" y="430" class="t">Multiple paths can exist under one host rule.</text>
+
+  <rect x="660" y="260" width="460" height="180" class="box" fill="#f0fdf4" stroke="#15803d"/>
+  <text x="685" y="292" class="h">Host: admin.example.com</text>
+  <text x="685" y="325" class="t">Path / -> admin-service:80</text>
+  <text x="685" y="372" class="t">Different host can map to different backend.</text>
+
+  <rect x="660" y="460" width="460" height="60" class="box" fill="#fff7ed" stroke="#c2410c"/>
+  <text x="685" y="495" class="t">If no host/path matches, use `defaultBackend` (optional fallback).</text>
+</svg>

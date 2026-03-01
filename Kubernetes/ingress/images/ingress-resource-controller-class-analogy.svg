@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="560" viewBox="0 0 1280 560" role="img" aria-label="Analogy for ingress resource ingress controller and ingress class">
+  <style>
+    .title { font: 700 28px Arial, sans-serif; fill: #0f172a; }
+    .box { rx: 14; ry: 14; stroke-width: 2; }
+    .h { font: 700 20px Arial, sans-serif; fill: #0f172a; }
+    .t { font: 500 14px Arial, sans-serif; fill: #334155; }
+    .arrow { stroke: #1e293b; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1e293b"/>
+    </marker>
+  </defs>
+
+  <text x="640" y="40" class="title" text-anchor="middle">Mental Model: Rulebook, Operator, and Team Label</text>
+
+  <rect x="40" y="90" width="1200" height="420" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" rx="16"/>
+
+  <rect x="90" y="150" width="330" height="280" class="box" fill="#eff6ff" stroke="#1d4ed8"/>
+  <text x="120" y="188" class="h">Ingress Resource</text>
+  <text x="120" y="214" class="t">Analogy: routing rulebook</text>
+  <text x="120" y="246" class="t">- host/path rules</text>
+  <text x="120" y="270" class="t">- TLS references</text>
+  <text x="120" y="294" class="t">- backend services</text>
+  <text x="120" y="332" class="t">It is configuration only.</text>
+  <text x="120" y="356" class="t">It does not route by itself.</text>
+
+  <rect x="475" y="150" width="330" height="280" class="box" fill="#f0fdf4" stroke="#15803d"/>
+  <text x="505" y="188" class="h">Ingress Controller</text>
+  <text x="505" y="214" class="t">Analogy: operator/reception desk</text>
+  <text x="505" y="246" class="t">- watches ingress objects</text>
+  <text x="505" y="270" class="t">- programs proxy config</text>
+  <text x="505" y="294" class="t">- serves live traffic</text>
+  <text x="505" y="332" class="t">Without this, rules exist</text>
+  <text x="505" y="356" class="t">but traffic does not move.</text>
+
+  <rect x="860" y="150" width="330" height="280" class="box" fill="#fff7ed" stroke="#c2410c"/>
+  <text x="890" y="188" class="h">IngressClass</text>
+  <text x="890" y="214" class="t">Analogy: team label on rulebook</text>
+  <text x="890" y="246" class="t">- public team</text>
+  <text x="890" y="270" class="t">- internal team</text>
+  <text x="890" y="294" class="t">- special controller team</text>
+  <text x="890" y="332" class="t">Determines which controller</text>
+  <text x="890" y="356" class="t">is responsible for the rules.</text>
+
+  <path d="M420 290 H475" class="arrow"/>
+  <path d="M805 290 H860" class="arrow"/>
+</svg>
