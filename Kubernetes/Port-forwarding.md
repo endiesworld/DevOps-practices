@@ -42,8 +42,22 @@ Use this when your browser and `kubectl` command run on the same machine.
 4. Open the app in your browser.
 5. Stop with `Ctrl+C` when done.
 
-```bash
-kubectl -n <namespace> port-forward svc/<service-name> 8080:80
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: audiobookshelf
+spec:
+  ports:
+    - port: 13378 # service port
+      targetPort: 80 # pod container port
+  selector:
+    app: audiobookshelf
+  type: ClusterIP
+```
+
+```bash 
+kubectl -n <namespace> port-forward svc/<service-name> 8080:13378  # 8080 is local port, 13378 is service port
 curl -I http://127.0.0.1:8080
 ```
 

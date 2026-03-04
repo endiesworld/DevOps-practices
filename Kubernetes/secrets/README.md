@@ -1,81 +1,149 @@
-# Secrets Management in Kubernetes
-A Secret is a Kubernetes object that allows you to store sensitive information, such as passwords, OAuth tokens, and SSH keys. Secrets help you manage sensitive data separately from application code, enhancing security and flexibility. When a pod is created, inject the secret into the pod so the sensitive data is available as environment variables or as files in a volume.
+# Kubernetes Secrets: Practical Guide (Including Flux + SOPS + age)
 
-There are two ways to create and use Secrets in Kubernetes:
-1. Imperative way using `kubectl` commands
+This guide covers how to create and consume Kubernetes Secrets safely, then how to store encrypted Secret manifests in Git with Flux.
+
+## Must-Fix Issues Addressed in This Revision
+
+1. Corrected confusion between hashing and base64 encoding.
+2. Replaced claims that `data` is the only declarative option; added `stringData`.
+3. Removed malformed/broken command blocks and trailing unrelated YAML.
+4. Fixed inconsistent Flux API examples and incomplete Kustomization snippets.
+5. Corrected `.sops.yaml` behavior explanation (encryption rules, not Flux decryption rules).
+6. Corrected filename/decryption assumptions (`.enc.yaml` is convention, not hard requirement).
+7. Added shell-history warning for `--from-literal` secrets.
+8. Added warning that base64 is not encryption.
+
+## 1) What a Kubernetes Secret Is
+
+A Secret is a Kubernetes API object for storing sensitive values (passwords, API keys, tokens, private keys).
+
+Important security reality:
+
+- `Secret.data` values are base64 encoded, not encrypted by default.
+- Base64 only transforms format; it does not provide cryptographic protection.
+- For stronger protection, use etcd encryption-at-rest and strict RBAC.
+
+## 2) Create Secrets (Imperative)
+
+### Quick method (acceptable for testing)
+
 ```bash
-kubectl create secret generic my-secret --from-literal=username=myuser --from-literal=password=mypassword
+kubectl create secret generic my-secret \
+  --from-literal=username=myuser \
+  --from-literal=password=mypassword
 ```
-**Explanation:** This command creates a Secret named `my-secret` with two key-value pairs: `username=myuser` and `password=mypassword`.
-If you wish to add additional key value pairs, simply specify the "--from-literal" options multiple times.
 
-2. Declarative way using a Secret definition file (YAML or JSON). So while creating a secret with a declarative approach, you must specify the secret values in a hashed format.
+Security note:
 
-So you must specify the data in an encoded form like this.
-Create a file named `secret.yaml` with the following content:
+- `--from-literal` can leak sensitive values into shell history/process args.
+- Prefer `--from-file` or stdin-based workflows for production use.
+
+### Safer file-based method
+
+Create local files:
+
+```bash
+printf 'myuser' > username.txt
+printf 'mypassword' > password.txt
+```
+
+Create Secret from files:
+
+```bash
+kubectl create secret generic my-secret \
+  --from-file=username=./username.txt \
+  --from-file=password=./password.txt
+```
+
+## 3) Create Secrets (Declarative YAML)
+
+You have two valid declarative patterns.
+
+### Option A: `stringData` (recommended for authoring)
+
 ```yaml
 apiVersion: v1
 kind: Secret
 metadata:
   name: my-secret
+  namespace: default
+type: Opaque
+stringData:
+  username: myuser
+  password: mypassword
+```
+
+- Kubernetes converts `stringData` into `data` on write.
+
+### Option B: `data` (base64 values)
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+  namespace: default
 type: Opaque
 data:
-  username: bXl1c2Vy # base64 for "myuser"
-  password: bXlwYXNzd29yZA== # base64 for "mypassword"
+  username: bXl1c2Vy
+  password: bXlwYXNzd29yZA==
 ```
 
-**Encoding Note:** Convert your plain text values to base64 encoded format using the following command:
+Encode/decode helpers:
 
 ```bash
-echo -n 'myuser' | base64 # 'myuser' becomes bXl1c2Vy
-echo -n 'mypassword' | base64 # 'mypassword' becomes bXlwYXNzd29yZA==
-``` 
-
-**Decoding Note:** To decode a base64 encoded value, you can use:
-```bash
-echo 'bXl1c2Vy' | base64 --decode
+printf 'myuser' | base64
+printf 'mypassword' | base64
+printf 'bXl1c2Vy' | base64 -d
 ```
 
-Then apply the file using kubectl:
+Apply:
+
 ```bash
 kubectl apply -f secret.yaml
 ```
-## Viewing Secrets
-To view the created Secrets, use the following command:
+
+## 4) View and Inspect Secrets
+
 ```bash
 kubectl get secrets
-kubectl describe secret my-secret    
+kubectl get secret my-secret -o yaml
+kubectl describe secret my-secret
 ```
 
-## Using a Secret in a Pod
-You can use a Secret in a Pod in two ways:
-1. As environment variables
-2. As files in a volume
+- `describe` shows keys/metadata but not decoded values.
+- `-o yaml` shows base64 in `data`.
 
-### 1. Using Secret as Environment Variables
-Create a Pod definition file named `pod-env.yaml`:
+## 5) Use Secrets in Pods
+
+### A) As environment variables (`envFrom`)
+
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: my-pod
+  name: my-pod-envfrom
 spec:
   containers:
   - name: my-container
     image: nginx
     envFrom:
     - secretRef:
-        name: my-secret # Reference the Secret here
+        name: my-secret
 ```
 
-**Note:** The above example mounts all key-value pairs from the Secret as environment variables in the container. Each key in the Secret becomes an environment variable with the corresponding value.
+Note:
 
-To inject specific keys from the Secret as environment variables, you can use the `env` field like this:
+- Each key becomes an environment variable.
+- Keys that are invalid env var names can be skipped by Kubernetes.
+
+### B) As specific environment variables (`env` + `secretKeyRef`)
+
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: my-pod
+  name: my-pod-env
 spec:
   containers:
   - name: my-container
@@ -93,17 +161,13 @@ spec:
           key: password
 ```
 
-Then create the Pod using:
-```bash
-kubectl apply -f pod-env.yaml
-```
-### 2. Using Secret as Files in a Volume
-Create a Pod definition file named `pod-volume.yaml`:
+### C) As files in a Secret volume
+
 ```yaml
 apiVersion: v1
 kind: Pod
 metadata:
-  name: my-pod
+  name: my-pod-volume
 spec:
   containers:
   - name: my-container
@@ -111,169 +175,141 @@ spec:
     volumeMounts:
     - name: secret-volume
       mountPath: /etc/secret-data
+      readOnly: true
   volumes:
   - name: secret-volume
     secret:
       secretName: my-secret
 ```
-Then create the Pod using:
-```bash
-kubectl apply -f pod-volume.yaml
-```
 
-**Note:** In this example, the Secret `my-secret` is mounted as files in the `/etc/secret-data` directory inside the container. Each key in the Secret becomes a file with the corresponding value as its content.
+- Each Secret key is mounted as a file under `/etc/secret-data`.
 
+## 6) GitOps Secrets with Flux + SOPS + age
 
+Goal:
 
-## GitOps Secrets with Flux + SOPS + age (Encrypt in Git, Decrypt in Cluster)
+- Store encrypted Secret manifests in Git.
+- Let Flux decrypt in-cluster during reconciliation.
 
-This README documents a clean workflow to **store Kubernetes `Secret` manifests encrypted in Git** and have **Flux decrypt them inside the cluster** during reconciliation.
+High-level flow:
 
-## How it works (high level)
+1. Workstation encrypts manifest with SOPS using age public key.
+2. Flux `kustomize-controller` uses age private key from `flux-system` Secret.
+3. Flux applies decrypted manifest to target namespace.
 
-- **You (workstation / WSL):**
-  - install `age` + `sops`
-  - generate an **age keypair**
-  - encrypt `Secret` YAML using **SOPS** + **age public key**
-  - commit/push encrypted YAML to Git
+Important:
 
-- **Cluster (Flux `kustomize-controller`):**
-  - pulls the repo
-  - uses the **age private key** stored as a **Kubernetes Secret**
-  - decrypts SOPS files *in-cluster*
-  - applies the decrypted resources to the API server
+- You do not install `sops` or `age` on Kubernetes nodes.
 
-> Important: You do **NOT** install `sops` or `age` on Kubernetes nodes. Decryption happens inside Flux controller pods.
+## 7) Install Tooling (Workstation)
 
----
+Ubuntu/WSL example:
 
-## Prerequisites
-
-- Flux v2 installed and bootstrapped
-- `kubectl` access to the cluster
-- A GitOps repo structure with Flux `Kustomization` resources (e.g., `clusters/staging/...`)
-- Workstation tools:
-  - `age`
-  - `sops`
-
----
-
-## Install tooling (Ubuntu / WSL)
-
-### Install `age` (Ubuntu/WSL)
 ```bash
 sudo apt update
 sudo apt install -y age
 age --version
 ```
 
-### Install `sops` (Ubuntu/WSL)
+Install `sops` from official release instructions.
 
-use the [official instructions](https://github.com/getsops/sops/releases)
+## 8) Generate age Keys
 
-### Generate age keys (one-time per environment)
-Generate a private key file:
 ```bash
 age-keygen -o age.agekey
-Print the public key (recipient):
 age-keygen -y age.agekey
-# outputs: age1...
-# To see both public and private keys:
-cat age.agekey
 ```
 
-The public key is used to encrypt files. The private key is used to decrypt files.
-What to keep where
+- `age.agekey` (private): keep secure, never commit.
+- `age1...` (public recipient): safe to share for encryption.
 
-- Private key (age.agekey): keep safe (NEVER commit to Git)
-- Public key (age1...): safe to share/use for encryption
+Optional helper:
 
-### Store the age private key in the cluster (one-time)
-
-Create a Kubernetes Secret in flux-system that contains your private key.
-
-The key inside the Secret must end with .agekey.
 ```bash
+export AGE_PUBLIC_KEY="$(age-keygen -y age.agekey)"
+```
 
-cat age.agekey |
+## 9) Store age Private Key in Cluster for Flux
+
+Create/update decryption key Secret in `flux-system`:
+
+```bash
 kubectl create secret generic sops-age \
---namespace=flux-system \
---from-file=age.agekey=/dev/stdin
-# Verify:
+  --namespace flux-system \
+  --from-file=age.agekey=./age.agekey \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+Verify:
+
+```bash
 kubectl -n flux-system get secret sops-age
 ```
-**NOTE:** The name `sops-age` is arbitrary but must match the `secretRef` name you will use in the Flux Kustomization later.
 
-### Encrypt an entire file using SOPS and the age public key:
-```bash
-sops --encrypt --age <age-public-key> --output secret.enc.yaml secret.yaml
-```
-  ## OR
+Note:
 
-### Encrypt specific fields in the file (e.g., only the `data` field):
-```bash
-sops --encrypt --age <age-public-key> --output secret.enc.yaml --encrypted-regex '^(data)$' secret.yaml
-# OR to encrypt both `data` and `stringData` fields:
-sops --age=$AGE_PUBLIC --encrypt --encrypted-regex '^(data|stringData)$' --in-place test-secret.yaml
-```
-**NOTE:** To decrypt the file locally for verification, you can use:
-```bash
-SOPS_AGE_KEY_FILE=age.agekey sops --decrypt --in-place test-secret.yaml
-#sops --decrypt --age <age-private-key> secret.enc.yaml
-```
+- Secret name `sops-age` is arbitrary, but must match `spec.decryption.secretRef.name` in Flux Kustomization.
+- Key filename should end with `.agekey`.
 
-**Note:** Ensure that the encrypted file is in a directory that Flux is watching (e.g., `clusters/staging/apps/`) and that the file name ends with `.enc.yaml` (or whatever regex you specified in the .sops.yaml) so that Flux knows to decrypt it. Also ensure that the encrypted file is a valid Kubernetes Secret manifest, and belongs to the appropriate namespace if specified.
-**Note:** In your cluster, the Flux controller will use the age private key stored in the `sops-age` Secret to decrypt the file `test-secret.yaml` during reconciliation. You do not need to (and should not) store the private key in Git or on your workstation after encryption. 
+## 10) Configure `.sops.yaml`
 
-**Recall:** When you set namespace: <namespace-value> at the Kustomization level, Kustomize performs what is known as Namespace Transformation. It will automatically inject that namespace into every resource listed in that folder, effectively "stamping" the <namespace-value> name onto your secret before it is sent to the Kubernetes API.
+Create `.sops.yaml` at repo root:
 
-### The "Management" vs. "Consumption" Rule
-flux-system is where your Decryption Key (sops-age) lives. Flux uses this internally to "unlock" your files.
-
-The target namespace (like staging or fleetmindai) is where your Application Secret (test-secret) should live. Your apps (like your fleetmindai deployment) generally cannot "reach out" into the flux-system namespace to grab a password due to Kubernetes security boundaries. Instead, you should create a separate Secret in the target namespace (staging) that contains the decrypted values, and reference that Secret in your Deployment manifests.
-
-### Configure Flux to use the age private key (Telling Flux where to find the decryption key)
-
-- create a ".sops.yaml" file in the root of your Git repo with the following content:
 ```yaml
 creation_rules:
-  - path_regex: '.*\.enc\.yaml$' # Only decrypt files ending with .enc.yaml
-    encrypted_regex: '^(data|stringData)$' # Only decrypt the "data" and "stringData" fields in Secret manifests
-    age: <age-public-key>
+  - path_regex: '.*\.enc\.yaml$'
+    encrypted_regex: '^(data|stringData)$'
+    age: age1REPLACE_WITH_YOUR_PUBLIC_KEY
 ```
 
-### Edit your `Kustomization` resource (e.g., `clusters/staging/kustomization.yaml`) to add the decryption configuration:
-- Tell Flux to actually use it for your specific project. You do this by adding a decryption block to your Kustomization manifest (usually found in clusters/staging/kustomization.yaml).
+What this does:
+
+- Defines how `sops` encrypts files matching the path regex.
+- `encrypted_regex` means only `data`/`stringData` fields are encrypted.
+
+## 11) Encrypt a Secret Manifest
+
+Example plaintext manifest (`test-secret.yaml`):
 
 ```yaml
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-kind: Kustomization
+apiVersion: v1
+kind: Secret
 metadata:
-    name: my-app
-    namespace: flux-system
-spec:
-    interval: 10m0s
-    decryption:
-        provider: sops
-        secretRef:
-            name: sops-age
-
-```
-**NOTE:** The `secretRef` name must match the name of the Kubernetes Secret you created in the `flux-system` namespace that contains your age private key.
-
-**MY CASE:** I named the Secret `sops-age`, so I reference it here. Also, my current GitOps repo structure looks like this:
-```text
-(base) endie@Endiesworld:~/Projects/Homelab/sochi/hml-project-1$ tree clusters/
-clusters/
-└── staging
-    ├── apps.yaml
-    └── flux-system
-        ├── gotk-components.yaml
-        ├── gotk-sync.yaml
-        └── kustomization.yaml
+  name: test-secret
+  namespace: staging
+type: Opaque
+stringData:
+  username: myuser
+  password: mypassword
 ```
 
-Where: flux-system => kustomization.yaml => ├── gotk-sync.yaml => apps.yaml. The encrypted Secret manifest will be referenced in apps.yaml like this:
+Encrypt to a separate file:
+
+```bash
+sops --encrypt --age "$AGE_PUBLIC_KEY" \
+  --encrypted-regex '^(data|stringData)$' \
+  --output test-secret.enc.yaml \
+  test-secret.yaml
+```
+
+Or encrypt in place:
+
+```bash
+sops --encrypt --age "$AGE_PUBLIC_KEY" \
+  --encrypted-regex '^(data|stringData)$' \
+  --in-place test-secret.yaml
+```
+
+Local decryption test:
+
+```bash
+SOPS_AGE_KEY_FILE=./age.agekey sops --decrypt test-secret.enc.yaml
+```
+
+## 12) Configure Flux Kustomization Decryption
+
+Example Flux `Kustomization` (`kustomize.toolkit.fluxcd.io/v1`):
+
 ```yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -284,28 +320,49 @@ spec:
   interval: 1m0s
   path: ./apps/staging
   prune: true
-  # --- ADDED HERE ---
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
   decryption:
     provider: sops
     secretRef:
       name: sops-age
-  # -----------------------
-  retryInterval: 2m0s
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  timeout: 5m0s
 ```
 
+Notes:
 
+- `decryption.secretRef.name` must match Secret created in `flux-system`.
+- Decryption behavior depends on SOPS metadata + Flux decryption config, not only file extension.
 
-Commit and push the encrypted file (`secret.enc.yaml`) to your Git repo.
+## 13) Reconcile and Verify
 
-### Apply changes
-Flux will automatically pull the changes, decrypt the Secret using the age private key stored in the cluster, and apply it to the Kubernetes API server.
-    image: my-app-image:latest
-    securityContext:
-      capabilities:
-        drop: ["ALL"]         # Layer 2: Drop the Swiss Army Knife
-        add: ["NET_BIND_SERVICE"] # Add back only the spoon
-``` 
+```bash
+kubectl apply -f clusters/staging/apps.yaml
+flux reconcile source git flux-system -n flux-system
+flux reconcile kustomization apps -n flux-system
+kubectl -n staging get secret test-secret
+```
+
+Check controller logs if needed:
+
+```bash
+kubectl -n flux-system logs deploy/kustomize-controller --tail=200
+```
+
+## 14) Namespace Rule (Management vs Consumption)
+
+- `flux-system` namespace holds decryption key Secret (for Flux internals).
+- Application Secrets should exist in the target app namespace (for app consumption).
+
+Reason:
+
+- Workloads in one namespace should not depend on reading secrets from `flux-system`.
+
+## 15) Common Mistakes
+
+1. Treating base64 as encryption.
+2. Committing `age.agekey` to Git.
+3. Classifying `.sops.yaml` as Flux config (it is SOPS encryption config).
+4. Using mismatched `secretRef.name` between Flux Kustomization and `flux-system` Secret.
+5. Assuming `.enc.yaml` suffix alone controls Flux decryption.
+6. Reusing identical Pod names in multiple examples and expecting all to apply cleanly.
